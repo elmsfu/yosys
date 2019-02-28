@@ -84,6 +84,8 @@ struct SynthIce40Pass : public ScriptPass
 		log("\n");
 		log("    -noabc\n");
 		log("        use built-in Yosys LUT techmapping instead of abc\n");
+		log("    -nolatches\n");
+		log("        do not map latches\n");
 		log("\n");
 		log("    -abc2\n");
 		log("        run two passes of 'abc' for slightly improved logic density\n");
@@ -99,7 +101,7 @@ struct SynthIce40Pass : public ScriptPass
 	}
 
 	string top_opt, blif_file, edif_file, json_file;
-	bool nocarry, nodffe, nobram, dsp, flatten, retime, relut, noabc, abc2, vpr;
+	bool nocarry, nodffe, nobram, dsp, latchesflatten, retime, relut, noabc, abc2, vpr;
 	int min_ce_use;
 
 	void clear_flags() YS_OVERRIDE
@@ -113,6 +115,7 @@ struct SynthIce40Pass : public ScriptPass
 		min_ce_use = -1;
 		nobram = false;
 		dsp = false;
+                latches = true;
 		flatten = true;
 		retime = false;
 		relut = false;
@@ -191,6 +194,8 @@ struct SynthIce40Pass : public ScriptPass
 			}
 			if (args[argidx] == "-noabc") {
 				noabc = true;
+			if (args[argidx] == "-nolatches") {
+				latches = false;
 				continue;
 			}
 			if (args[argidx] == "-abc2") {
@@ -300,7 +305,10 @@ struct SynthIce40Pass : public ScriptPass
 				run("abc", "      (only if -abc2)");
 				run("ice40_opt", "(only if -abc2)");
 			}
-			run("techmap -map +/ice40/latches_map.v");
+			if (latches && check_label("map_lactches"))
+			{
+				run("techmap -map +/ice40/latches_map.v");
+			}
 			if (noabc || help_mode) {
 				run("simplemap", "                               (only if -noabc)");
 				run("techmap -map +/gate2lut.v -D LUT_WIDTH=4", "(only if -noabc)");
